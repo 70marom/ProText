@@ -11,7 +11,7 @@ def main():
             session.receive_messages()
 
         except Exception as e:
-            print(f"Main Error: {e}")
+            print(f"Main Error: {e}.")
             print("Error: failed to connect to server!")
 
 if __name__ == '__main__':
