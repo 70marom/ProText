@@ -45,3 +45,10 @@ class Database:
         with self.lock:
             self.cursor.execute("SELECT PublicKey FROM clients WHERE Tel = ?", (tel,))
             return self.cursor.fetchone()
+
+    def save_message(self, tel_src, tel_dst, new_connection, enc_aes, enc_msg):
+        with self.lock:
+            self.cursor.execute("INSERT INTO messages " +
+                                "(TelSrc, TelDst, NewConnection, EncAES, EncMsg) VALUES (?,?,?,?,?)",
+                                (tel_src, tel_dst, new_connection, enc_aes, enc_msg))
+            self.connection.commit()

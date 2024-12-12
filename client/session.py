@@ -2,6 +2,7 @@ import os.path
 import struct
 import threading
 
+from client.aes import AES
 from client.console import Console
 from client.keys_folders import save_files
 from client.send_requests import SendRequests
@@ -15,6 +16,8 @@ class Session:
         self.tel = None
         self.running = True
         self.keys = RSA()
+        self.encrypted_self_aes = dict()
+        self.decrypted_self_aes = dict()
         self.console = Console(self)
         self.console.start_window()
 
@@ -68,7 +71,8 @@ class Session:
                     print("Invalid contact! Please try again.")
                     threading.Thread(target=self.console.choose_contact).start()
                 case 203:
-                    print(payload)
+                    self.create_encrypt_save_aes(payload)
+                    threading.Thread(target=self.console.chat).start()
 
 
     def register(self):
@@ -80,8 +84,19 @@ class Session:
         self.keys.load_private_key(os.path.join(self.tel, "private_key.pem"))
         self.send_requests.login_request()
 
-
     def handle_2fa(self):
         auth_code = self.socket.recv(6).decode()
         print(f"Received 2FA code: {auth_code}")
         self.console.validate_2fa()
+
+    def create_encrypt_save_aes(self, rsa_key):
+        aes = AES()
+        rsa = RSA()
+
+        rsa.load_public_key(key=rsa_key)
+        print(rsa_key)
+        print(type(rsa))
+        enc_aes_iv_key = rsa.encrypt(b"G")
+        print("here")
+        self.encrypted_self_aes[self.console.contact] = enc_aes_iv_key
+        self.decrypted_self_aes[self.console.contact] = aes

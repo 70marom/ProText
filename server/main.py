@@ -3,7 +3,6 @@ import threading
 from server.database import Database
 from server.user import User
 
-
 def session(conn, addr, database):
     print(f"New connection from {addr}")
     user = User(conn, addr, database)

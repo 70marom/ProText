@@ -18,7 +18,10 @@ class RSA:
 
     def load_public_key(self, key_path="server_public_key.pem", key=None):
         if key:
-            self.public_key = key
+            self.public_key = load_pem_public_key(
+                key,
+                backend=default_backend()
+            )
             return
         with open(key_path, "rb") as key_file:
             self.public_key = load_pem_public_key(

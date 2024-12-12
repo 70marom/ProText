@@ -41,3 +41,10 @@ class SendRequests:
 
     def request_contact_public_key(self, contact_tel):
         Request(self.tel, 104, contact_tel.encode()).send_request(self.socket)
+
+    def send_message(self, contact_tel, new_connection, encrypted_aes, message):
+        if not isinstance(contact_tel, bytes):
+            contact_tel = contact_tel.encode('utf-8')
+
+        payload = contact_tel + f"{new_connection}".encode() + encrypted_aes + message
+        Request(self.tel, 105, payload).send_request(self.socket)

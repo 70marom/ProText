@@ -28,3 +28,6 @@ def invalid_contact(conn):
 
 def send_public_key(conn, public_key):
     Response(203, public_key).send_response(conn)
+
+def send_message(conn, payload):
+    Response(402, payload).send_response(conn)

@@ -1,15 +1,12 @@
 import struct
-from cryptography.hazmat.primitives.asymmetric import padding
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
-from cryptography.hazmat.primitives import hashes
-from cryptography.hazmat.primitives.serialization import load_pem_public_key
 from cryptography.hazmat.backends import default_backend
 import send_responses
 from server.rsa_server import RSAServer
 from server.secure_channel_auth import SecureChannelAuth
 from server.send_responses import invalid_tel, invalid_code, expired_code, sending_code, register_successful
-import secure_channel_auth
 
+tel_sockets_dict = dict()
 
 class User:
     def __init__(self, conn, addr, database):
@@ -54,6 +51,8 @@ class User:
                     self.handle_login_request(tel)
                 case 104:
                     self.handle_request_public_key(payload)
+                case 105:
+                    self.forward_message(payload)
 
 
     def handle_register_request(self, tel):
@@ -104,9 +103,11 @@ class User:
                 if self.registering:
                     self.database.add_client(self.tel, decrypted_key)
                     print(f"{self.addr} registered with phone number {self.tel}")
+                    tel_sockets_dict[self.tel] = self.conn
                     register_successful(self.conn)
                 else:
                     print(f"{self.addr} logged in with phone number {self.tel}")
+                    tel_sockets_dict[self.tel] = self.conn
                     send_responses.login_successful(self.conn)
                     send_responses.send_count_pending_messages(self.conn, self.database.get_number_of_pending_messages(self.tel))
             case 301:  # Invalid code
@@ -126,3 +127,27 @@ class User:
             return
         send_responses.send_public_key(self.conn, public_key[0])
         print(f"Sent public key of {contact} to {self.addr}")
+
+    def forward_message(self, payload):
+        try:
+            contact = payload[:10]
+            if not isinstance(contact, str):
+                contact = contact.decode()
+
+            conn = tel_sockets_dict[contact]
+            conn.send(payload)
+
+        except Exception as e:
+            tel_dst, new_connection, encrypted_aes_key = struct.unpack('!10s 1s 128s', payload[:139])
+            if not isinstance(tel_dst, str):
+                tel_dst = tel_dst.decode()
+            print(new_connection)
+            if not isinstance(new_connection, int):
+                new_connection = int(new_connection)
+            if new_connection == 1:
+                new_connection = True
+            else:
+                new_connection = False
+            msg = payload[139:]
+            print(f"{new_connection}\n{encrypted_aes_key}\n{msg}")
+            self.database.save_message(self.tel, tel_dst, new_connection, encrypted_aes_key, msg)

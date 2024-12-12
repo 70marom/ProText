@@ -3,8 +3,10 @@ import re
 class Console:
     def __init__(self, session):
         self.session = session
+        self.contact = None
+        self.new_connection = True
         self.session.console = self
-        print("Welcome to the TeleApp secure messaging system!")
+        print("Welcome to the ProText secure messaging system!")
 
 
     def start_window(self):
@@ -41,6 +43,8 @@ class Console:
                 continue
             else:
                 break
+        self.contact = contact
+        self.new_connection = 1
         self.session.send_requests.request_contact_public_key(contact)
 
     def show_pending_count(self, count_list):
@@ -51,3 +55,14 @@ class Console:
         for tup in count_list:
             if tup[1] > 0:
                 print(f"\tFrom {tup[0]}: {tup[1]} messages")
+
+    def chat(self):
+        print("Chatting with ", self.contact)
+        print("Type '\\home' to exit the chat")
+        while True:
+            message = input("Enter message: ")
+            if message == "\\home":
+                return self.choose_contact()
+            encrypted_message = self.session.decrypted_self_aes[self.contact].encrypt(message.encode())
+            self.session.send_requests.send_message(self.contact, self.new_connection, self.session.encrypted_self_aes[self.contact], encrypted_message)
+            self.new_connection = 0
