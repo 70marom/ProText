@@ -8,6 +8,11 @@ class AES:
         self.iv = os.urandom(16)
         self.cipher = Cipher(algorithms.AES(self.key), modes.CFB(self.iv), backend=default_backend())
 
+    def set_aes(self, key, iv):
+        self.key = key
+        self.iv = iv
+        self.cipher = Cipher(algorithms.AES(self.key), modes.CFB(self.iv), backend=default_backend())
+
     def encrypt(self, data):
         encryptor = self.cipher.encryptor()
         return encryptor.update(data) + encryptor.finalize()

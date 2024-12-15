@@ -41,6 +41,16 @@ class Database:
             self.cursor.execute("SELECT TelSrc, COUNT(*) FROM messages WHERE TelDst = ? GROUP BY TelSrc", (tel,))
             return self.cursor.fetchall()
 
+    def get_pending_messages(self, tel_dst):
+        with self.lock:
+            self.cursor.execute("SELECT TelSrc, NewConnection, EncAES, EncMsg FROM messages WHERE TelDst = ?", (tel_dst,))
+            return self.cursor.fetchall()
+
+    def delete_pending_messages(self, tel_dst):
+        with self.lock:
+            self.cursor.execute("DELETE FROM messages WHERE TelDst = ?", (tel_dst,))
+            self.connection.commit()
+
     def get_public_key(self, tel):
         with self.lock:
             self.cursor.execute("SELECT PublicKey FROM clients WHERE Tel = ?", (tel,))

@@ -76,6 +76,10 @@ class User:
             print(f"{self.addr} tried to login with a non existing phone number!")
             invalid_tel(self.conn)
             return
+        if tel in tel_sockets_dict:
+            print(f"{self.addr} tried to login with a phone number already logged in!")
+            invalid_tel(self.conn)
+            return
         self.tel = tel
         self.auth_code = SecureChannelAuth()
         sending_code(self.conn)
@@ -110,6 +114,7 @@ class User:
                     tel_sockets_dict[self.tel] = self.conn
                     send_responses.login_successful(self.conn)
                     send_responses.send_count_pending_messages(self.conn, self.database.get_number_of_pending_messages(self.tel))
+                    self.send_pending_messages()
             case 301:  # Invalid code
                 invalid_code(self.conn)
                 print(f"{self.addr} entered an invalid authentication code!")
@@ -135,7 +140,8 @@ class User:
                 contact = contact.decode()
 
             conn = tel_sockets_dict[contact]
-            conn.send(payload)
+            payload = self.tel.encode() + payload[10:]
+            send_responses.send_message(conn, payload)
 
         except Exception as e:
             tel_dst, new_connection, encrypted_aes_key = struct.unpack('!10s 1s 128s', payload[:139])
@@ -151,3 +157,11 @@ class User:
             msg = payload[139:]
             print(f"{new_connection}\n{encrypted_aes_key}\n{msg}")
             self.database.save_message(self.tel, tel_dst, new_connection, encrypted_aes_key, msg)
+
+    def send_pending_messages(self):
+        pending_messages = self.database.get_pending_messages(self.tel)
+        self.database.delete_pending_messages(self.tel)
+        for msg in pending_messages:
+            tel_src, new_connection, encrypted_aes_key, encrypted_msg = msg
+            payload = tel_src.encode() + str(new_connection).encode() + encrypted_aes_key + encrypted_msg
+            send_responses.send_message(self.conn, payload)

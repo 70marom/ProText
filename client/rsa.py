@@ -51,6 +51,20 @@ class RSA:
         )
         return ciphertext
 
+    def decrypt(self, ciphertext):
+        if not isinstance(ciphertext, bytes):
+            ciphertext = ciphertext.encode('utf-8')
+
+        plaintext = self.private_key.decrypt(
+            ciphertext,
+            padding.OAEP(
+                mgf=padding.MGF1(algorithm=hashes.SHA256()),
+                algorithm=hashes.SHA256(),
+                label=None
+            )
+        )
+        return plaintext
+
     def get_public_pem(self):
         return self.public_key.public_bytes(
         encoding=serialization.Encoding.PEM,

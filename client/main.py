@@ -5,7 +5,7 @@ from client.session import Session
 def main():
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         try:
-            s.connect(('localhost', 9999))
+            s.connect(('localhost', 9090))
             print("Connected to server!")
             session = Session(s)
             session.receive_messages()

@@ -6,6 +6,7 @@ class Console:
         self.contact = None
         self.new_connection = True
         self.session.console = self
+        self.pending_messages = dict()
         print("Welcome to the ProText secure messaging system!")
 
 
@@ -31,7 +32,12 @@ class Console:
                 print("Invalid choice")
 
     def validate_2fa(self):
-        user_code = input("Enter your authentication code: ")
+        while True:
+            user_code = input("Enter your authentication code: ")
+            if re.match(r"^\d{6}$", user_code) is None:
+                print("Invalid authentication code! Please enter a 6-digit code")
+                continue
+            break
         print("Sending authentication code to server...")
         self.session.send_requests.try_auth(user_code, self.session.keys)
 
@@ -59,10 +65,24 @@ class Console:
     def chat(self):
         print("Chatting with ", self.contact)
         print("Type '\\home' to exit the chat")
+        if self.contact in self.pending_messages:
+            for msg in self.pending_messages[self.contact]:
+                print(f"Partner: {msg}")
+            self.pending_messages[self.contact] = []
         while True:
             message = input("Enter message: ")
             if message == "\\home":
+                self.contact = None
                 return self.choose_contact()
             encrypted_message = self.session.decrypted_self_aes[self.contact].encrypt(message.encode())
             self.session.send_requests.send_message(self.contact, self.new_connection, self.session.encrypted_self_aes[self.contact], encrypted_message)
             self.new_connection = 0
+
+
+    def save_or_display(self, decrypted_messages, tel_src):
+        if tel_src not in self.pending_messages:
+            self.pending_messages[tel_src] = []
+        if tel_src != self.contact:
+            self.pending_messages[tel_src].append(decrypted_messages)
+        else:
+            print(f"Partner: {decrypted_messages}")
