@@ -1,3 +1,4 @@
+from cryptography import exceptions
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives.asymmetric import padding
 from cryptography.hazmat.primitives import hashes
@@ -46,3 +47,49 @@ class RSAServer:
             )
         )
         return plaintext
+
+    def sign(self, message):
+        return self.private_key.sign(
+            message,
+            padding.PSS(
+                mgf=padding.MGF1(hashes.SHA256()),
+                salt_length=padding.PSS.MAX_LENGTH
+            ),
+            hashes.SHA256()
+        )
+
+    def verify_signature(self, message, signature):
+        try:
+            self.public_key.verify(
+                signature,
+                message,
+                padding.PSS(
+                    mgf=padding.MGF1(hashes.SHA256()),
+                    salt_length=padding.PSS.MAX_LENGTH
+                ),
+                hashes.SHA256()
+            )
+            return True
+        except exceptions.InvalidSignature:
+            return False
+
+
+def verify_signature(message, signature, public_key):
+    try:
+        # load public key from PEM format
+        public_key = load_pem_public_key(
+            public_key,
+            backend=default_backend()
+        )
+        public_key.verify(
+            signature,
+            message,
+            padding.PSS(
+                mgf=padding.MGF1(hashes.SHA256()),
+                salt_length=padding.PSS.MAX_LENGTH
+            ),
+            hashes.SHA256()
+        )
+        return True
+    except exceptions.InvalidSignature:
+        return False

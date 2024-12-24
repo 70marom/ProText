@@ -1,5 +1,4 @@
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
-from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.backends import default_backend
 import os
 from client.request import Request
@@ -7,15 +6,15 @@ from client.rsa import RSA
 
 
 class SendRequests:
-    def __init__(self, socket, tel):
-        self.tel = tel
+    def __init__(self, socket, tel, keys):
         self.socket = socket
+        self.request = Request(tel, keys)
 
     def register_request(self):
-        Request(self.tel, 100, b"").send_request(self.socket)
+        self.request.send_request(self.socket, 100, b"")
 
     def login_request(self):
-        Request(self.tel, 103, b"").send_request(self.socket)
+        self.request.send_request(self.socket, 103, b"")
 
     def try_auth(self, code, keys):
         if not isinstance(code, bytes):
@@ -37,14 +36,14 @@ class SendRequests:
 
         combined_payload = encrypted_aes_key + encrypted_payload
 
-        Request(self.tel, 101, combined_payload).send_request(self.socket)
+        self.request.send_request(self.socket, 101, combined_payload)
 
     def request_contact_public_key(self, contact_tel):
-        Request(self.tel, 104, contact_tel.encode()).send_request(self.socket)
+        self.request.send_request(self.socket, 104, contact_tel.encode())
 
     def send_message(self, contact_tel, new_connection, encrypted_aes, message):
         if not isinstance(contact_tel, bytes):
             contact_tel = contact_tel.encode('utf-8')
 
         payload = contact_tel + f"{new_connection}".encode() + encrypted_aes + message
-        Request(self.tel, 105, payload).send_request(self.socket)
+        self.request.send_request(self.socket, 105, payload)

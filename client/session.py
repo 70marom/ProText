@@ -11,10 +11,12 @@ import json
 class Session:
     def __init__(self, socket):
         self.socket = socket
-        self.send_requests = SendRequests(socket, None)
         self.tel = None
         self.running = True
         self.keys = RSA()
+        self.server_key = RSA()
+        self.server_key.load_public_key(key_path="server_public_key.pem")
+        self.send_requests = SendRequests(socket, None, self.keys)
         self.encrypted_self_aes = dict()
         self.decrypted_self_aes = dict()
         self.decrypted_contact_aes = dict()
@@ -23,7 +25,7 @@ class Session:
 
     def set_tel(self, tel):
         self.tel = tel
-        self.send_requests.tel = tel
+        self.send_requests.request.tel = tel
 
     def receive_messages(self):
         while self.running:
@@ -46,6 +48,13 @@ class Session:
                 print(f"Session Error: {e}")
                 self.running = False
                 return
+
+            signature = payload[-128:]
+            if not self.server_key.verify_signature(header + payload[:-128], signature):
+                print("Error: invalid signature from server!")
+                self.running = False
+                return
+            payload = payload[:-128]
 
             match code:
                 case 300:

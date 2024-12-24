@@ -1,33 +1,39 @@
 import json
 from server.response import Response
 
-def invalid_tel(conn):
-    Response(300, b"").send_response(conn)
+class SendResponses:
+    def __init__(self, conn, keys):
+        self.keys = keys
+        self.conn = conn
+        self.response = Response(keys)
 
-def invalid_code(conn):
-    Response(301, b"").send_response(conn)
+    def invalid_tel(self):
+        self.response.send_response(self.conn, 300, b"")
 
-def expired_code(conn):
-    Response(302, b"").send_response(conn)
+    def invalid_code(self):
+        self.response.send_response(self.conn, 301, b"")
 
-def sending_code(conn):
-    Response(400, b"").send_response(conn)
+    def expired_code(self):
+        self.response.send_response(self.conn, 302, b"")
 
-def register_successful(conn):
-    Response(200, b"").send_response(conn)
+    def sending_code(self):
+        self.response.send_response(self.conn, 400, b"")
 
-def login_successful(conn):
-    Response(202, b"").send_response(conn)
+    def register_successful(self):
+        self.response.send_response(self.conn, 200, b"")
 
-def send_count_pending_messages(conn, count_list):
-    serialized_data = json.dumps(count_list)
-    Response(401, serialized_data.encode('utf-8')).send_response(conn)
+    def login_successful(self):
+        self.response.send_response(self.conn, 202, b"")
 
-def invalid_contact(conn):
-    Response(303, b"").send_response(conn)
+    def send_count_pending_messages(self, count_list):
+        serialized_data = json.dumps(count_list)
+        self.response.send_response(self.conn, 401, serialized_data.encode('utf-8'))
 
-def send_public_key(conn, public_key):
-    Response(203, public_key).send_response(conn)
+    def invalid_contact(self):
+       self.response.send_response(self.conn, 303, b"")
 
-def send_message(conn, payload):
-    Response(402, payload).send_response(conn)
+    def send_public_key(self, public_key):
+        self.response.send_response(self.conn, 203, public_key)
+
+    def send_message(self, payload):
+        self.response.send_response(self.conn, 402, payload)

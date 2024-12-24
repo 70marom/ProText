@@ -1,11 +1,9 @@
 import struct
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.backends import default_backend
-import send_responses
-from server.rsa_server import RSAServer
+from server.rsa_server import RSAServer, verify_signature
 from server.secure_channel_auth import SecureChannelAuth
-from server.send_responses import invalid_tel, invalid_code, expired_code, sending_code, register_successful
-
+from server.send_responses import SendResponses
 tel_sockets_dict = dict()
 
 class User:
@@ -19,6 +17,8 @@ class User:
         self.keys = RSAServer()
         self.keys.load_keys()
         self.registering = False
+        self.client_public_key = None
+        self.send_responses = SendResponses(conn, self.keys)
 
     def receive_messages(self):
         while self.running:
@@ -42,6 +42,14 @@ class User:
                 self.running = False
                 return
 
+            if self.client_public_key:
+                signature = payload[-128:]
+                if not verify_signature(header + payload[:-128], signature, self.client_public_key):
+                    print("Error: invalid signature from client!")
+                    self.running = False
+                    return
+                payload = payload[:-128]
+
             match code:
                 case 100:
                     self.handle_register_request(tel)
@@ -60,12 +68,12 @@ class User:
             tel = tel.decode()
         if self.database.tel_exists(tel):
             print(f"{self.addr} tried to register with an existing phone number!")
-            invalid_tel(self.conn)
+            self.send_responses.invalid_tel()
             return
         self.registering = True
         self.tel = tel
         self.auth_code = SecureChannelAuth()
-        sending_code(self.conn)
+        self.send_responses.sending_code()
         self.auth_code.send_by_secure_channel(self.conn)
         print(f"Sent auth code to {self.addr}")
 
@@ -74,15 +82,15 @@ class User:
             tel = tel.decode()
         if not self.database.tel_exists(tel):
             print(f"{self.addr} tried to login with a non existing phone number!")
-            invalid_tel(self.conn)
+            self.send_responses.invalid_tel()
             return
         if tel in tel_sockets_dict:
             print(f"{self.addr} tried to login with a phone number already logged in!")
-            invalid_tel(self.conn)
+            self.send_responses.invalid_tel()
             return
         self.tel = tel
         self.auth_code = SecureChannelAuth()
-        sending_code(self.conn)
+        self.send_responses.sending_code()
         self.auth_code.send_by_secure_channel(self.conn)
         print(f"Sent auth code to {self.addr}")
 
@@ -102,24 +110,26 @@ class User:
         decrypted_code = dec_payload[:6]  # Assuming the code is 6 bytes
         decrypted_key = dec_payload[6:]  # The remaining part is the RSA public key
 
+        self.client_public_key = decrypted_key
+
         match self.auth_code.verify_auth_code(decrypted_code.decode()):
             case 200:  # Accepted
                 if self.registering:
                     self.database.add_client(self.tel, decrypted_key)
                     print(f"{self.addr} registered with phone number {self.tel}")
                     tel_sockets_dict[self.tel] = self.conn
-                    register_successful(self.conn)
+                    self.send_responses.register_successful()
                 else:
                     print(f"{self.addr} logged in with phone number {self.tel}")
                     tel_sockets_dict[self.tel] = self.conn
-                    send_responses.login_successful(self.conn)
-                    send_responses.send_count_pending_messages(self.conn, self.database.get_number_of_pending_messages(self.tel))
+                    self.send_responses.login_successful()
+                    self.send_responses.send_count_pending_messages(self.database.get_number_of_pending_messages(self.tel))
                     self.send_pending_messages()
             case 301:  # Invalid code
-                invalid_code(self.conn)
+                self.send_responses.invalid_code()
                 print(f"{self.addr} entered an invalid authentication code!")
             case 302:  # Expired
-                expired_code(self.conn)
+                self.send_responses.expired_code()
                 print(f"{self.addr} entered an expired authentication code!")
                 self.handle_register_request(self.tel)
 
@@ -128,9 +138,9 @@ class User:
         public_key = self.database.get_public_key(contact)
         if public_key is None:
             print(f"{self.addr} requested public key of non existing contact {contact}")
-            send_responses.invalid_contact(self.conn)
+            self.send_responses.invalid_contact()
             return
-        send_responses.send_public_key(self.conn, public_key[0])
+        self.send_responses.send_public_key(public_key[0])
         print(f"Sent public key of {contact} to {self.addr}")
 
     def forward_message(self, payload):
@@ -141,13 +151,12 @@ class User:
 
             conn = tel_sockets_dict[contact]
             payload = self.tel.encode() + payload[10:]
-            send_responses.send_message(conn, payload)
+            self.send_responses.send_message(payload)
 
         except Exception as e:
             tel_dst, new_connection, encrypted_aes_key = struct.unpack('!10s 1s 128s', payload[:139])
             if not isinstance(tel_dst, str):
                 tel_dst = tel_dst.decode()
-            print(new_connection)
             if not isinstance(new_connection, int):
                 new_connection = int(new_connection)
             if new_connection == 1:
@@ -155,7 +164,6 @@ class User:
             else:
                 new_connection = False
             msg = payload[139:]
-            print(f"{new_connection}\n{encrypted_aes_key}\n{msg}")
             self.database.save_message(self.tel, tel_dst, new_connection, encrypted_aes_key, msg)
 
     def send_pending_messages(self):
@@ -164,4 +172,4 @@ class User:
         for msg in pending_messages:
             tel_src, new_connection, encrypted_aes_key, encrypted_msg = msg
             payload = tel_src.encode() + str(new_connection).encode() + encrypted_aes_key + encrypted_msg
-            send_responses.send_message(self.conn, payload)
+            self.send_responses.send_message(payload)

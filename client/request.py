@@ -1,12 +1,12 @@
 import struct
 
 class Request:
-    def __init__(self, tel, code, payload):
+    def __init__(self, tel, keys):
         self.tel = tel
-        self.code = code
-        self.payload = payload
-        self.payload_size = len(payload)
+        self.keys = keys
 
-    def send_request(self, s):
-        s.sendall(struct.pack('!10s I I', self.tel.encode(), self.code, self.payload_size))
-        s.sendall(self.payload)
+    def send_request(self, s, code, payload):
+        header = struct.pack('!10s I I', self.tel.encode(), code, len(payload) + 128)
+        signature = self.keys.sign(header + payload)
+        s.sendall(header)
+        s.sendall(payload + signature)
