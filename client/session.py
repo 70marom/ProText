@@ -45,7 +45,8 @@ class Session:
                         self.running = False
 
             except Exception as e:
-                print(f"Session Error: {e}")
+                if(self.running):
+                    print(f"Session Error: {e}")
                 self.running = False
                 return
 
