@@ -22,6 +22,7 @@ class RSAServer:
                 password=None,
                 backend=default_backend()
             )
+        print("Keys loaded.")
 
     def encrypt(self, data):
         if not isinstance(data, bytes):
@@ -57,6 +58,7 @@ class RSAServer:
             ),
             hashes.SHA256()
         )
+        print("Message signed.")
 
     def verify_signature(self, message, signature):
         try:
@@ -72,7 +74,7 @@ class RSAServer:
             return True
         except exceptions.InvalidSignature:
             return False
-
+        print("Signature verified.")
 
 def verify_signature(message, signature, public_key):
     try:
@@ -90,6 +92,7 @@ def verify_signature(message, signature, public_key):
             ),
             hashes.SHA256()
         )
+        print("Signature verified.")
         return True
     except exceptions.InvalidSignature:
         return False
