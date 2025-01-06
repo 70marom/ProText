@@ -16,6 +16,7 @@ class RSA:
             key_size=size
         )
         self.public_key = self.private_key.public_key()
+        print("New RSA keys generated.")
 
     def load_public_key(self, key_path="server_public_key.pem", key=None):
         if key:
@@ -29,6 +30,7 @@ class RSA:
                 key_file.read(),
                 backend=default_backend()
             )
+        print("Public key loaded.")
 
     def load_private_key(self, key_path):
         with open(key_path, "rb") as key_file:
@@ -37,6 +39,7 @@ class RSA:
                 backend=default_backend(),
                 password=None
             )
+        print("Private key loaded.")
 
     def encrypt(self, data):
         if not isinstance(data, bytes):
@@ -88,6 +91,7 @@ class RSA:
             ),
             hashes.SHA256()
         )
+        print("Message signed.")
 
     def verify_signature(self, message, signature):
         try:
@@ -100,6 +104,7 @@ class RSA:
                 ),
                 hashes.SHA256()
             )
+            print("Signature verification successful.")
             return True
         except exceptions.InvalidSignature:
             return False
