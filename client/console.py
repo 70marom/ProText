@@ -43,10 +43,18 @@ class Console:
 
     def choose_contact(self):
         while True:
-            contact = input("Choose a contact: ")
+            contact = input("Choose a contact (\\exit to exit): ")
             if contact == self.session.tel:
                 print("You cannot send messages to yourself!")
                 continue
+            elif contact == "\\exit":
+                print("Exiting...")
+                try:
+                    self.session.running = False
+                    self.session.socket.close()
+                except Exception:
+                    print("Disconnected from server!")
+                return
             else:
                 break
         self.contact = contact
