@@ -35,5 +35,8 @@ class SendResponses:
     def send_public_key(self, public_key):
         self.response.send_response(self.conn, 203, public_key)
 
-    def send_message(self, payload):
-        self.response.send_response(self.conn, 402, payload)
+    def send_message(self, payload, conn=None):
+        if conn:
+            self.response.send_response(conn, 402, payload)
+        else:
+            self.response.send_response(self.conn, 402, payload)
