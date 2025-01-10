@@ -11,6 +11,7 @@ class RSAServer:
         self.private_key = None
 
     def load_keys(self, key_path="server_public_key.pem", private_key_path="server_private_key.pem"):
+        # read and load public and private keys from files
         with open(key_path, "rb") as key_file:
             self.public_key = load_pem_public_key(
                 key_file.read(),
@@ -22,7 +23,7 @@ class RSAServer:
                 password=None,
                 backend=default_backend()
             )
-        print("Keys loaded.")
+        print("RSA keys loaded.")
 
     def encrypt(self, data):
         if not isinstance(data, bytes):
@@ -50,6 +51,8 @@ class RSAServer:
         return plaintext
 
     def sign(self, message):
+        # sign message with private key
+        print("Message signed.")
         return self.private_key.sign(
             message,
             padding.PSS(
@@ -58,10 +61,10 @@ class RSAServer:
             ),
             hashes.SHA256()
         )
-        print("Message signed.")
 
     def verify_signature(self, message, signature):
         try:
+            # verify signature with public key
             self.public_key.verify(
                 signature,
                 message,
@@ -71,10 +74,11 @@ class RSAServer:
                 ),
                 hashes.SHA256()
             )
+            print("Signature verified.")
             return True
+        # if signature is invalid
         except exceptions.InvalidSignature:
             return False
-        print("Signature verified.")
 
 def verify_signature(message, signature, public_key):
     try:

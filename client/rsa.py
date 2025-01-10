@@ -19,12 +19,14 @@ class RSA:
         print("New RSA keys generated.")
 
     def load_public_key(self, key_path="server_public_key.pem", key=None):
+        # if key is provided, use it instead of key in key_path
         if key:
             self.public_key = load_pem_public_key(
                 key,
                 backend=default_backend()
             )
             return
+        # otherwise, load key from key_path
         with open(key_path, "rb") as key_file:
             self.public_key = load_pem_public_key(
                 key_file.read(),
@@ -33,6 +35,7 @@ class RSA:
         print("Public key loaded.")
 
     def load_private_key(self, key_path):
+        # load private key from key_path
         with open(key_path, "rb") as key_file:
             self.private_key = load_pem_private_key(
                 key_file.read(),
@@ -42,6 +45,7 @@ class RSA:
         print("Private key loaded.")
 
     def encrypt(self, data):
+        # if data is not bytes, encode it to utf-8
         if not isinstance(data, bytes):
             data = data.encode('utf-8')
 
@@ -56,6 +60,7 @@ class RSA:
         return ciphertext
 
     def decrypt(self, ciphertext):
+        # if ciphertext is not bytes, encode it to utf-8
         if not isinstance(ciphertext, bytes):
             ciphertext = ciphertext.encode('utf-8')
 
@@ -83,6 +88,8 @@ class RSA:
     )
 
     def sign(self, message):
+        print("Message signed.")
+        # sign the message using private key
         return self.private_key.sign(
             message,
             padding.PSS(
@@ -91,10 +98,10 @@ class RSA:
             ),
             hashes.SHA256()
         )
-        print("Message signed.")
 
     def verify_signature(self, message, signature):
         try:
+            # verify the signature using public key
             self.public_key.verify(
                 signature,
                 message,
@@ -106,5 +113,6 @@ class RSA:
             )
             print("Signature verification successful.")
             return True
+        # if signature is invalid, return False
         except exceptions.InvalidSignature:
             return False

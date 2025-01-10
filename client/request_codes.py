@@ -1,0 +1,6 @@
+class RequestCodes:
+    REGISTER = 100
+    SEND_AUTH = 101
+    LOGIN = 103
+    REQUEST_CONTACT_PUBLIC_KEY = 104
+    SEND_MESSAGE = 105

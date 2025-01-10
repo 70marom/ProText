@@ -5,7 +5,7 @@ class Database:
     def __init__(self):
         self.connection = sqlite3.connect('database.db', check_same_thread=False)
         self.cursor = self.connection.cursor()
-        self.lock = threading.Lock()
+        self.lock = threading.Lock() # lock to prevent multiple threads from accessing the database at the same time
         self.create_clients_table()
         self.create_messages_table()
 
@@ -28,7 +28,7 @@ class Database:
     def tel_exists(self, tel):
         with self.lock:
             self.cursor.execute("SELECT * FROM clients WHERE Tel = ?", (tel,))
-            return self.cursor.fetchone() is not None
+            return self.cursor.fetchone() is not None # returns True if the tel exists in the database
 
     def add_client(self, tel, public_key):
         with self.lock:
@@ -43,11 +43,13 @@ class Database:
 
     def get_pending_messages(self, tel_dst):
         with self.lock:
+            # return a list of tuples where each tuple is a source tel, new connection status, AES key, and encrypted message
             self.cursor.execute("SELECT TelSrc, NewConnection, EncAES, EncMsg FROM messages WHERE TelDst = ?", (tel_dst,))
             return self.cursor.fetchall()
 
     def delete_pending_messages(self, tel_dst):
         with self.lock:
+            # delete all messages where the destination is the parameter tel
             self.cursor.execute("DELETE FROM messages WHERE TelDst = ?", (tel_dst,))
             self.connection.commit()
 

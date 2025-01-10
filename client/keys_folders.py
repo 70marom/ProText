@@ -4,6 +4,7 @@ def save_files(keys, tel):
     try:
         if not os.path.exists(tel):
             os.mkdir(tel)
+        # save public and private keys to files in the folder of the user
         with open(os.path.join(tel, 'public_key.pem'), 'wb') as f:
             f.write(keys.get_public_pem())
         with open(os.path.join(tel, 'private_key.pem'), 'wb') as f:
